@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FieldOps.ApiGateway/FieldOps.ApiGateway.csproj" />
+    <Project Path="src/FieldOps.Contracts/FieldOps.Contracts.csproj" />
+    <Project Path="src/FieldOps.Notification.Worker/FieldOps.Notification.Worker.csproj" />
+    <Project Path="src/FieldOps.Technicians.Api/FieldOps.Technicians.Api.csproj" />
+    <Project Path="src/FieldOps.WorkOrders.Api/FieldOps.WorkOrders.Api.csproj" />
+  </Folder>
+</Solution>
