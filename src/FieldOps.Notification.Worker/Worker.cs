@@ -1,9 +1,11 @@
 using FieldOps.Contracts.Events;
+using FieldOps.Notification.Worker.data;
+using FieldOps.Notification.Worker.Models;
 using FieldOps.Notification.Worker.Services;
+using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text.Json;
-using System.Collections.Concurrent;
 
 namespace FieldOps.Notification.Worker;
 
@@ -12,7 +14,7 @@ public sealed class Worker : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<Worker> _logger;
     private readonly EmailSender _emailSender;
-    private readonly ConcurrentDictionary<Guid, byte> _processedEventIds = new();
+    private readonly IDbContextFactory<NotificationsDbContext> _dbContextFactory;
 
     private IConnection? _connection;
     private IChannel? _channel;
@@ -20,11 +22,13 @@ public sealed class Worker : BackgroundService
     public Worker(
         IConfiguration configuration,
         ILogger<Worker> logger,
-        EmailSender emailSender)
+        EmailSender emailSender,
+        IDbContextFactory<NotificationsDbContext> dbContextFactory)
     {
         _configuration = configuration;
         _logger = logger;
         _emailSender = emailSender;
+        _dbContextFactory = dbContextFactory;
     }
 
     protected override async Task ExecuteAsync(
@@ -50,18 +54,23 @@ public sealed class Worker : BackgroundService
         var deadLetterRoutingKey = GetRequiredSetting("DeadLetterRoutingKey");
 
 
-        _connection = await factory.CreateConnectionAsync(
-            cancellationToken: stoppingToken);
+        _connection = await factory.CreateConnectionAsync(cancellationToken: stoppingToken);
 
-        _channel = await _connection.CreateChannelAsync(
+        _channel = await _connection.CreateChannelAsync(cancellationToken: stoppingToken);
+
+        await _channel.ExchangeDeclareAsync(
+            exchange: exchangeName,
+            type: ExchangeType.Topic,
+            durable: true,
+            autoDelete: false,
             cancellationToken: stoppingToken);
 
         await _channel.ExchangeDeclareAsync(
-    exchange: deadLetterExchangeName,
-    type: ExchangeType.Direct,
-    durable: true,
-    autoDelete: false,
-    cancellationToken: stoppingToken);
+            exchange: deadLetterExchangeName,
+            type: ExchangeType.Direct,
+            durable: true,
+            autoDelete: false,
+            cancellationToken: stoppingToken);
 
         await _channel.QueueDeclareAsync(
             queue: deadLetterQueueName,
@@ -97,6 +106,12 @@ public sealed class Worker : BackgroundService
             routingKey: routingKey,
             cancellationToken: stoppingToken);
 
+        await _channel.BasicQosAsync(
+            prefetchSize: 0,
+            prefetchCount: 1,
+            global: false,
+            cancellationToken: stoppingToken);
+
         var consumer = new AsyncEventingBasicConsumer(_channel);
 
         consumer.ReceivedAsync += async (_, eventArgs) =>
@@ -110,21 +125,35 @@ public sealed class Worker : BackgroundService
 
                 if (message is null)
                 {
-                    throw new JsonException(
-                        "The assignment event was empty.");
+                    throw new JsonException("The assignment event was empty.");
                 }
 
-                if (_processedEventIds.ContainsKey(message.EventId))
-                {
-                    _logger.LogWarning("Duplicate event {EventId} received. Skipping email.", message.EventId);
+                await using var dbContext = await _dbContextFactory.CreateDbContextAsync(stoppingToken);
 
-                    await _channel.BasicAckAsync(deliveryTag: eventArgs.DeliveryTag, multiple: false,cancellationToken: stoppingToken);
+                var alreadyProcessed = await dbContext.ProcessedMessages.AnyAsync(x => x.EventId == message.EventId, stoppingToken);
+
+                if (alreadyProcessed)
+                {
+                    _logger.LogWarning("Duplicate event {EventId} ignored.", message.EventId);
+
+                    await _channel.BasicAckAsync(deliveryTag: eventArgs.DeliveryTag,multiple: false, cancellationToken: stoppingToken);
 
                     return;
                 }
 
                 await SendEmailWithRetryAsync(message, stoppingToken);
-                _processedEventIds.TryAdd(message.EventId, 0);
+
+                dbContext.ProcessedMessages.Add(
+                    new ProcessedMessage
+                    {
+                        EventId = message.EventId,
+                        EventType = nameof(WorkOrderAssignedEvent),
+                        ProcessedAtUtc = DateTime.UtcNow
+                    });
+
+                await dbContext.SaveChangesAsync(stoppingToken);
+
+                await _channel.BasicAckAsync(deliveryTag: eventArgs.DeliveryTag, multiple: false,cancellationToken: stoppingToken);
 
                 _logger.LogInformation(
                     """
@@ -143,7 +172,6 @@ public sealed class Worker : BackgroundService
                     message.Location,
                     message.OccurredAtUtc);
 
-                await _channel.BasicAckAsync(deliveryTag: eventArgs.DeliveryTag, multiple: false,cancellationToken: stoppingToken);
                 return;
             }
             catch (JsonException exception)
@@ -166,7 +194,7 @@ public sealed class Worker : BackgroundService
                     "Failed to process message {MessageId}.",
                     eventArgs.BasicProperties.MessageId);
 
-                // Temporary failures are returned to the queue.
+                // Retries are exhausted, so send the message to the dead-letter queue.
                 await _channel.BasicNackAsync(
                     deliveryTag: eventArgs.DeliveryTag,
                     multiple: false,
