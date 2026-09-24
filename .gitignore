@@ -495,3 +495,6 @@ logs/
 
 # Local development secrets
 appsettings.Local.json
+
+# Backup files
+*.bak
