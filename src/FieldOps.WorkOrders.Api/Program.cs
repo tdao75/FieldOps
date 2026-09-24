@@ -63,7 +63,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthentication();
+builder.Services.AddAuthorization();
 
 builder.Services.AddHealthChecks();
 
@@ -83,7 +83,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("health");
+app.MapHealthChecks("/health");
 app.Run();
 
 public partial class Program;

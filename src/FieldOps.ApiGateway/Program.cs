@@ -33,5 +33,5 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 app.MapReverseProxy();
-app.MapHealthChecks("health");
+app.MapHealthChecks("/health");
 app.Run();
