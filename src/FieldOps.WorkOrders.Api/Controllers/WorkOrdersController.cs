@@ -51,7 +51,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
             return Ok(MapToResponse(workOrder));
         }
 
-        [Authorize]
+        [Authorize(Roles = "Dispatcher,Administrator")]
         [HttpPost]
         public async Task<ActionResult<WorkOrderResponse>> Create(CreateWorkOrderRequest request, CancellationToken cancellationToken)
         {
@@ -74,7 +74,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
             return CreatedAtRoute(routeName: "GetWorkOrderById",routeValues: new { id = workOrder.Id },value: response);
         }
 
-        [Authorize]
+        [Authorize (Roles = "Dispatcher,Administrator")]
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<WorkOrderResponse>> UpdateStatus(Guid id, UpdateWorkOrderStatusRequest request, CancellationToken cancellationToken)
         {
@@ -98,7 +98,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
             return Ok(MapToResponse(workOrder));
         }
 
-        [Authorize]
+        [Authorize(Roles = "Dispatcher,Administrator")]
         [HttpPut("{id:guid}/assignment")]
         public async Task<ActionResult<WorkOrderResponse>> Assign(Guid id,AssignWorkOrderRequest request,CancellationToken cancellationToken)
         {

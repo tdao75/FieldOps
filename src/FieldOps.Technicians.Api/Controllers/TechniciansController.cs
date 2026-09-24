@@ -59,7 +59,7 @@ public sealed class TechniciansController : ControllerBase
         return Ok(MapToResponse(technician));
     }
 
-    [Authorize]
+    [Authorize(Roles = "Dispatcher,Administrator")]
     [HttpPost]
     public async Task<ActionResult<TechnicianResponse>> Create(CreateTechnicianRequest request, CancellationToken cancellationToken)
     {

@@ -1,4 +1,5 @@
-﻿using FieldOps.Identity.Api.Contracts;
+﻿using FieldOps.Identity.Api.Authorization;
+using FieldOps.Identity.Api.Contracts;
 using FieldOps.Identity.Api.Models;
 using FieldOps.Identity.Api.Services;
 using Microsoft.AspNetCore.Identity;
@@ -32,12 +33,15 @@ public sealed class AuthController : ControllerBase
             });
         }
 
-        var token = _jwtTokenService.CreateToken(user);
+        var roles = await _userManager.GetRolesAsync(user);
+
+        var token = _jwtTokenService.CreateToken(user, roles);
 
         return Ok(new
         {
             accessToken = token,
             expiresInSeconds = 3600,
+            roles,
             user = new
             {
                 user.Id,
@@ -49,12 +53,9 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register(
-        RegisterRequest request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Register( RegisterRequest request, CancellationToken cancellationToken)
     {
-        var existingUser =
-            await _userManager.FindByEmailAsync(request.Email);
+        var existingUser = await _userManager.FindByEmailAsync(request.Email);
 
         if (existingUser is not null)
         {
@@ -73,9 +74,18 @@ public sealed class AuthController : ControllerBase
             LastName = request.LastName.Trim()
         };
 
-        var result = await _userManager.CreateAsync(
-            user,
-            request.Password);
+        var result = await _userManager.CreateAsync(user,request.Password);
+
+        var roleResult = await _userManager.AddToRoleAsync(user, FieldOpsRoles.Technician);
+
+        if(!roleResult.Succeeded)
+        {
+            foreach (var error in roleResult.Errors)
+            {
+                ModelState.AddModelError(error.Code, error.Description);
+            }
+            return ValidationProblem(ModelState);
+        }
 
         if (!result.Succeeded)
         {

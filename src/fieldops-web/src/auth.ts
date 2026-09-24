@@ -16,9 +16,25 @@ export interface AuthenticatedUser{
 }
 
 export interface LoginResponse{
-    accessToken:string;
-    expiredInSeconds:number;
-    user:AuthenticatedUser;
+    accessToken: string;
+    expiresInSeconds: number;
+    roles: string[];
+    user: AuthenticatedUser;
+}
+
+export interface AuthenticatedUser {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    roles: string[];
+ }
+
+export interface RegisterRequest {
+    email:string;
+    password:string;
+    firstName:string;
+    lastName:string;
 }
 
 export async function login(request:LoginRequest):Promise<LoginResponse> {
@@ -38,6 +54,8 @@ export async function login(request:LoginRequest):Promise<LoginResponse> {
     }
 
     const result = (await response.json()) as LoginResponse;
+
+    result.user.roles = result.roles;
 
     localStorage.setItem(TOKEN_KEY, result.accessToken);
     localStorage.setItem(USER_KEY, JSON.stringify(result.user));
@@ -62,13 +80,44 @@ export function getCurrentUser(): AuthenticatedUser | null {
     }
   
     try {
-      return JSON.parse(value) as AuthenticatedUser;
+      const user = JSON.parse(value) as AuthenticatedUser;
+  
+      return {
+        ...user,
+        roles: Array.isArray(user.roles) ? user.roles: [],
+      };
     } catch {
       logout();
       return null;
     }
   }
-  
   export function isAuthenticated(): boolean {
     return getAccessToken() !== null;
+  }
+
+  export async function register(request:RegisterRequest,):Promise<LoginResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/auth/register`,{
+        method:"POST",
+        headers:{
+            Accept:"application/json",
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify(request),
+    },);
+
+    if(!response.ok){
+        if(response.status ===409){
+            throw new Error("An account with this email already exists.",);
+        }
+    }
+    const errorBody = await response.text();
+    throw new Error(errorBody || `Registration failed: ${response.status}`, );
+
+    
+    // Registration does not return a JWT, so sign in
+    // immediately after creating the account.
+    return login({
+        email:request.email,
+        password:request.password,
+    });
   }

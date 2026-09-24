@@ -14,7 +14,7 @@ namespace FieldOps.Identity.Api.Services
             _configuration = configuration;
         }
 
-        public string CreateToken(ApplicationUser user)
+        public string CreateToken(ApplicationUser user, IEnumerable<string> roles)
         {
             var key = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT key is not configured.");
             var issuer = _configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT issuer is not configured.");
@@ -29,6 +29,8 @@ namespace FieldOps.Identity.Api.Services
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new(ClaimTypes.Name, user.DisplayName)
             };
+
+            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
             var credential = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),SecurityAlgorithms.HmacSha256); 
 

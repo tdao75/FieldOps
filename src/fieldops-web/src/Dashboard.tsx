@@ -6,7 +6,11 @@ import AssignmentControl from "./AssignmentControl";
 import TechniciansPanel from "./TechniciansPanel";
 import "./App.css";
 
-function App() {
+interface DashboardProps {
+  canManage: boolean;
+}
+
+function Dashboard({ canManage }: DashboardProps) {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,9 +97,20 @@ function App() {
         </article>
       </section>
 
-      <CreateWorkOrderForm onCreated={loadDashboard} />
-
-      <TechniciansPanel technicians={technicians} onCreated={loadDashboard} />
+      {canManage ? (
+        <>
+          <CreateWorkOrderForm onCreated={loadDashboard} />
+          <TechniciansPanel
+            technicians={technicians}
+            onCreated={loadDashboard}
+          />
+        </>
+      ) : (
+        <div className="access-note">
+          Technician access is read-only. Dispatchers manage work orders and
+          assignments.
+        </div>
+      )}
 
       <section className="content-panel">
         <div className="panel-heading">
@@ -136,11 +151,19 @@ function App() {
                       <span className="badge status">{workOrder.status}</span>
                     </td>
                     <td>
-                      <AssignmentControl
-                        workOrder={workOrder}
-                        technicians={technicians}
-                        onAssigned={loadDashboard}
-                      />
+                      {canManage ? (
+                        <AssignmentControl
+                          workOrder={workOrder}
+                          technicians={technicians}
+                          onAssigned={loadDashboard}
+                        />
+                      ) : (
+                        <span className="read-only-value">
+                          {workOrder.assignedTechnicianId
+                            ? "Assigned"
+                            : "Unassigned"}
+                        </span>
+                      )}
                     </td>
                     <td>
                       {new Date(workOrder.createdAtUtc).toLocaleDateString()}
@@ -156,4 +179,4 @@ function App() {
   );
 }
 
-export default App;
+export default Dashboard;

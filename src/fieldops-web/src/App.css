@@ -600,3 +600,40 @@ td {
 .session-bar button:hover {
   background: #f3f6fa;
 }
+
+.role-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e8efff;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.access-note {
+  margin: 24px 0;
+  padding: 14px 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.read-only-value {
+  color: #667085;
+  font-size: 0.875rem;
+}
+
+.login-card .auth-switch {
+  margin-top: 4px;
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.login-card .auth-switch:hover {
+  background: #eff6ff;
+}
