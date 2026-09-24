@@ -7,4 +7,7 @@
     <Project Path="src/FieldOps.Technicians.Api/FieldOps.Technicians.Api.csproj" />
     <Project Path="src/FieldOps.WorkOrders.Api/FieldOps.WorkOrders.Api.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FieldOps.WorkOrders.Api.Tests/FieldOps.WorkOrders.Api.Tests.csproj" />
+  </Folder>
 </Solution>
