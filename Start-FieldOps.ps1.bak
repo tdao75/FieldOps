@@ -31,6 +31,43 @@ function Wait-ForPort {
     throw "$ServiceName did not start on port $Port."
 }
 
+function Wait-ForHttp {
+    param(
+        [string]$Url,
+        [string]$ServiceName,
+        [int]$TimeoutSeconds = 120
+    )
+
+    Write-Host "Waiting for $ServiceName at $Url..." `
+        -ForegroundColor Yellow
+
+    $deadline =
+        (Get-Date).AddSeconds($TimeoutSeconds)
+
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $response = Invoke-WebRequest `
+                -Uri $Url `
+                -UseBasicParsing `
+                -TimeoutSec 3 `
+                -ErrorAction Stop
+
+            if ($response.StatusCode -eq 200) {
+                Write-Host "$ServiceName is healthy." `
+                    -ForegroundColor Green
+                return
+            }
+        }
+        catch {
+            # The service is still starting.
+        }
+
+        Start-Sleep -Seconds 2
+    }
+
+    throw "$ServiceName did not become healthy at $Url."
+}
+
 function Start-FieldOpsProcess {
     param(
         [string]$Title,
@@ -131,8 +168,8 @@ $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.Technicians.Api --no-launch-profile --urls http://localhost:5072
 '@
 
-Wait-ForPort `
-    -Port 5072 `
+Wait-ForHttp `
+    -Url "http://localhost:5072/health" `
     -ServiceName "Technicians API"
 
 # Work Orders uses the Technicians API.
@@ -143,8 +180,8 @@ $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.WorkOrders.Api --no-launch-profile --urls http://localhost:5062
 '@
 
-Wait-ForPort `
-    -Port 5062 `
+Wait-ForHttp `
+    -Url "http://localhost:5062/health" `
     -ServiceName "Work Orders API"
 
 # Identity API uses PostgreSQL.
@@ -155,8 +192,8 @@ $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.Identity.Api --no-launch-profile --urls http://localhost:5090
 '@
 
-Wait-ForPort `
-    -Port 5090 `
+Wait-ForHttp `
+    -Url "http://localhost:5090/health" `
     -ServiceName "Identity API"
 	
 # Gateway starts after both APIs.
@@ -179,7 +216,7 @@ $env:DOTNET_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.Notification.Worker --no-launch-profile
 '@
 
-# Fix Vite to port 5173 instead of changing to 5174.
+# Use port 5174 because InterviewTracker uses port 5173.
 Start-FieldOpsProcess `
     -Title "FieldOps - React" `
     -Command @'
@@ -196,9 +233,11 @@ Write-Host "FieldOps is ready." -ForegroundColor Green
 Write-Host ""
 Write-Host "React:     http://localhost:5174"
 Write-Host "Gateway:   http://localhost:5080"
+Write-Host "Identity Swagger: http://localhost:5090/swagger"
 Write-Host "WorkOrders Swagger: http://localhost:5062/swagger"
 Write-Host "Technicians Swagger: http://localhost:5072/swagger"
 Write-Host "RabbitMQ:  http://localhost:15672"
 Write-Host "Mailpit:   http://localhost:8025"
+Write-Host "pgAdmin:   http://localhost:5050"
 
 Start-Process "http://localhost:5174"

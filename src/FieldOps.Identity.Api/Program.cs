@@ -46,6 +46,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 
 builder.Services.AddScoped<JwtTokenService>();
 
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 await IdentitySeeder.SeedAsync(app.Services);
@@ -61,5 +62,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
+app.MapHealthChecks("health");
 app.Run();

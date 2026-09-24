@@ -39,7 +39,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization(); 
+builder.Services.AddAuthorization();
+
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -55,5 +57,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
+app.MapHealthChecks("health");
 app.Run();

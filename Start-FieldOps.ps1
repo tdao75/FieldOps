@@ -31,6 +31,43 @@ function Wait-ForPort {
     throw "$ServiceName did not start on port $Port."
 }
 
+function Wait-ForHttp {
+    param(
+        [string]$Url,
+        [string]$ServiceName,
+        [int]$TimeoutSeconds = 120
+    )
+
+    Write-Host "Waiting for $ServiceName at $Url..." `
+        -ForegroundColor Yellow
+
+    $deadline =
+        (Get-Date).AddSeconds($TimeoutSeconds)
+
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $response = Invoke-WebRequest `
+                -Uri $Url `
+                -UseBasicParsing `
+                -TimeoutSec 3 `
+                -ErrorAction Stop
+
+            if ($response.StatusCode -eq 200) {
+                Write-Host "$ServiceName is healthy." `
+                    -ForegroundColor Green
+                return
+            }
+        }
+        catch {
+            # The service is still starting.
+        }
+
+        Start-Sleep -Seconds 2
+    }
+
+    throw "$ServiceName did not become healthy at $Url."
+}
+
 function Start-FieldOpsProcess {
     param(
         [string]$Title,
@@ -131,8 +168,8 @@ $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.Technicians.Api --no-launch-profile --urls http://localhost:5072
 '@
 
-Wait-ForPort `
-    -Port 5072 `
+Wait-ForHttp `
+    -Url "http://localhost:5072/health" `
     -ServiceName "Technicians API"
 
 # Work Orders uses the Technicians API.
@@ -143,8 +180,8 @@ $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.WorkOrders.Api --no-launch-profile --urls http://localhost:5062
 '@
 
-Wait-ForPort `
-    -Port 5062 `
+Wait-ForHttp `
+    -Url "http://localhost:5062/health" `
     -ServiceName "Work Orders API"
 
 # Identity API uses PostgreSQL.
@@ -155,8 +192,8 @@ $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.Identity.Api --no-launch-profile --urls http://localhost:5090
 '@
 
-Wait-ForPort `
-    -Port 5090 `
+Wait-ForHttp `
+    -Url "http://localhost:5090/health" `
     -ServiceName "Identity API"
 	
 # Gateway starts after both APIs.
@@ -167,8 +204,8 @@ $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src\FieldOps.ApiGateway --no-launch-profile --urls http://localhost:5080
 '@
 
-Wait-ForPort `
-    -Port 5080 `
+Wait-ForHttp `
+    -Url "http://localhost:5080/health" `
     -ServiceName "API Gateway"
 
 # Notification worker uses RabbitMQ and Mailpit.

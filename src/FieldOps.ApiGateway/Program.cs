@@ -20,6 +20,8 @@ builder.Services.AddCors(options =>
         });
 });
 
+
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 app.UseCors("ReactClient");
@@ -31,5 +33,5 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 app.MapReverseProxy();
-
+app.MapHealthChecks("health");
 app.Run();
