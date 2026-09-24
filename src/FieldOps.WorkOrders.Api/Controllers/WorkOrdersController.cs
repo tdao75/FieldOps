@@ -7,6 +7,7 @@ using FieldOps.WorkOrders.Api.Enums;
 using FieldOps.Contracts.Events;
 using System.Text.Json;
 using FieldOps.WorkOrders.Api.Clients;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FieldOps.WorkOrders.Api.Controllers
 {
@@ -50,6 +51,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
             return Ok(MapToResponse(workOrder));
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<WorkOrderResponse>> Create(CreateWorkOrderRequest request, CancellationToken cancellationToken)
         {
@@ -72,6 +74,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
             return CreatedAtRoute(routeName: "GetWorkOrderById",routeValues: new { id = workOrder.Id },value: response);
         }
 
+        [Authorize]
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<WorkOrderResponse>> UpdateStatus(Guid id, UpdateWorkOrderStatusRequest request, CancellationToken cancellationToken)
         {
@@ -95,6 +98,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
             return Ok(MapToResponse(workOrder));
         }
 
+        [Authorize]
         [HttpPut("{id:guid}/assignment")]
         public async Task<ActionResult<WorkOrderResponse>> Assign(Guid id,AssignWorkOrderRequest request,CancellationToken cancellationToken)
         {

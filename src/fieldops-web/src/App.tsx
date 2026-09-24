@@ -1,154 +1,44 @@
-import { useCallback, useEffect, useState } from "react";
-import { getTechnicians, getWorkOrders } from "./api";
-import type { Technician, WorkOrder } from "./models";
-import CreateWorkOrderForm from "./CreateWorkOrderForm";
-import AssignmentControl from "./AssignmentControl";
-import "./App.css";
+import { useState, useEffect } from "react";
+import Dashboard from "./Dashboard";
+import LoginPage from "./LoginPage";
+import { getCurrentUser,logout, type AuthenticatedUser } from "./auth";
 
-function App() {
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [technicians, setTechnicians] = useState<Technician[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+export default function App(){
+    const [user,setUser] = useState<AuthenticatedUser | null>(() => getCurrentUser(),);
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError("");
+    useEffect(()=> {
+        function handleUnauthorized(){
+            setUser(null);
+        }
+        window.addEventListener("fieldops:unauthorized",handleUnauthorized);
 
-      const [workOrderData, technicianData] = await Promise.all([
-        getWorkOrders(),
-        getTechnicians(),
-      ]);
+        return ()=> {
+            window.removeEventListener("fieldops:unauthorized",handleUnauthorized);
+        };
+    },[]);
 
-      setWorkOrders(workOrderData);
-      setTechnicians(technicianData);
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to load FieldOps data.",
-      );
-    } finally {
-      setIsLoading(false);
+    function handleLogout(){
+        logout();
+        setUser(null);
     }
-  }, []);
 
-  useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
+    if(!user){
+        return <LoginPage onLogin={setUser} />;
+    }
 
-  const openCount = workOrders.filter(
-    (item) => item.status !== "Completed" && item.status !== "Cancelled",
-  ).length;
+    return(
+        <>
+            <div className="session-bar">
+                <span>
+                    Signed in as {" "}
+                    <strong>{user.firstName} {user.lastName}</strong>
+                </span>
+                <button type="button" onClick={handleLogout}>
+                    Sign out
+                </button>
+            </div>
 
-  const emergencyCount = workOrders.filter(
-    (item) =>
-      item.priority === "Emergency" &&
-      item.status !== "Completed" &&
-      item.status !== "Cancelled",
-  ).length;
-
-  if (isLoading) {
-    return <main className="page-message">Loading FieldOps…</main>;
-  }
-
-  return (
-    <main className="app-shell">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">Operations dashboard</p>
-          <h1>FieldOps</h1>
-          <p className="subtitle">Work orders and field technician activity</p>
-        </div>
-
-        <div className="service-status">
-          <span className="status-dot" />
-          API gateway connected
-        </div>
-      </header>
-
-      {error && <div className="error-message">{error}</div>}
-
-      <section className="summary-grid">
-        <article className="summary-card">
-          <span>Total work orders</span>
-          <strong>{workOrders.length}</strong>
-        </article>
-
-        <article className="summary-card">
-          <span>Open work orders</span>
-          <strong>{openCount}</strong>
-        </article>
-
-        <article className="summary-card urgent">
-          <span>Emergencies</span>
-          <strong>{emergencyCount}</strong>
-        </article>
-
-        <article className="summary-card">
-          <span>Active technicians</span>
-          <strong>{technicians.length}</strong>
-        </article>
-      </section>
-      <CreateWorkOrderForm onCreated={loadDashboard} />
-      <section className="content-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Current workload</p>
-            <h2>Work orders</h2>
-          </div>
-        </div>
-
-        {workOrders.length === 0 ? (
-          <p className="empty-message">No work orders found.</p>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Location</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Technician</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workOrders.map((workOrder) => (
-                  <tr key={workOrder.id}>
-                    <td className="title-cell">{workOrder.title}</td>
-                    <td>{workOrder.location}</td>
-                    <td>
-                      <span
-                        className={`badge priority-${workOrder.priority.toLowerCase()}`}
-                      >
-                        {workOrder.priority}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge status">{workOrder.status}</span>
-                    </td>
-                    <td>
-                      <AssignmentControl
-                        workOrder={workOrder}
-                        technicians={technicians}
-                        onAssigned={loadDashboard}
-                      />
-                    </td>
-                    <td>
-                      {new Date(workOrder.createdAtUtc).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </main>
-  );
+            <Dashboard />
+        </>
+    );
 }
-
-export default App;

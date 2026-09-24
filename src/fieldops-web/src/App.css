@@ -359,3 +359,244 @@ td {
   color: #8a94a6;
   font-size: 12px;
 }
+
+.technicians-panel {
+  margin-bottom: 24px;
+}
+
+.technicians-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.8fr) 1.2fr;
+  min-height: 350px;
+}
+
+.technician-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 24px;
+  border-right: 1px solid #e6eaf0;
+}
+
+.technician-form h3 {
+  margin: 0 0 3px;
+}
+
+.technician-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.technician-form input {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid #cfd7e3;
+  border-radius: 8px;
+  color: #172033;
+  outline: none;
+}
+
+.technician-form input:focus {
+  border-color: #3662d8;
+  box-shadow: 0 0 0 3px rgb(54 98 216 / 12%);
+}
+
+.technician-form button {
+  align-self: flex-start;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #315fd6;
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.technician-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.technician-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.technician-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 15px;
+  border: 1px solid #e2e7ee;
+  border-radius: 10px;
+}
+
+.technician-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8efff;
+  color: #3153a4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.technician-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.technician-details span {
+  overflow: hidden;
+  color: #667085;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.technician-details .skills {
+  color: #3659ad;
+}
+
+.active-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e8f5ee;
+  color: #21734c;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+@media (max-width: 850px) {
+  .technicians-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .technician-form {
+    border-right: 0;
+    border-bottom: 1px solid #e6eaf0;
+  }
+}
+
+@media (max-width: 520px) {
+  .name-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f3f6fa;
+}
+
+.login-card {
+  width: min(100%, 420px);
+  padding: 40px;
+  border: 1px solid #dce3ec;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 18px 45px rgba(15, 31, 54, 0.1);
+}
+
+.login-card h1 {
+  margin: 6px 0;
+  font-size: 2rem;
+}
+
+.login-description {
+  margin-bottom: 28px;
+  color: #667085;
+}
+
+.login-card form {
+  display: grid;
+  gap: 10px;
+}
+
+.login-card label {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.login-card input {
+  padding: 12px 14px;
+  border: 1px solid #cfd8e5;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.login-card input:focus {
+  border-color: #2563eb;
+  outline: 3px solid rgba(37, 99, 235, 0.12);
+}
+
+.login-card button {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-card button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.login-error {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b42318;
+}
+
+.session-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px;
+  border-bottom: 1px solid #dce3ec;
+  background: #ffffff;
+  color: #475467;
+  font-size: 0.9rem;
+}
+
+.session-bar button {
+  padding: 7px 12px;
+  border: 1px solid #cfd8e5;
+  border-radius: 7px;
+  background: white;
+  color: #344054;
+  font: inherit;
+  cursor: pointer;
+}
+
+.session-bar button:hover {
+  background: #f3f6fa;
+}

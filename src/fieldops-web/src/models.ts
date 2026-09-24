@@ -34,3 +34,10 @@ export interface CreateWorkOrderRequest{
 export interface AssignWorkOrderRequest{
   technicianId:string;
 }
+export interface CreateTechnicianRequest{
+  firstName:string;
+  lastName:string;
+  email:string;
+  phoneNumber?:string;
+  skills?:string;
+}

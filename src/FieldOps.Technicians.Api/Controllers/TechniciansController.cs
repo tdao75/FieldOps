@@ -3,6 +3,7 @@ using FieldOps.Technicians.Api.DTOs;
 using FieldOps.Technicians.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FieldOps.Technicians.Api.Controllers;
 
@@ -58,6 +59,7 @@ public sealed class TechniciansController : ControllerBase
         return Ok(MapToResponse(technician));
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<TechnicianResponse>> Create(CreateTechnicianRequest request, CancellationToken cancellationToken)
     {
@@ -91,6 +93,8 @@ public sealed class TechniciansController : ControllerBase
 
         return CreatedAtRoute(routeName: "GetTechnicianById", routeValues: new { id = technician.Id }, value: response);
     }
+
+    
 
     private static TechnicianResponse MapToResponse(
         Technician technician)
