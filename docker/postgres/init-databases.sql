@@ -1,0 +1,2 @@
+CREATE DATABASE fieldops_technicians;
+CREATE DATABASE fieldops_identity;

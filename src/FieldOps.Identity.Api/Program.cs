@@ -1,9 +1,8 @@
 using FieldOps.Identity.Api.Data;
 using FieldOps.Identity.Api.Models;
+using FieldOps.Identity.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.DataProtection;
-using FieldOps.Identity.Api.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,7 +47,16 @@ builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddHealthChecks();
 var app = builder.Build();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using var scope = app.Services.CreateScope();
 
+    var dbContext =scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+
+    await dbContext.Database.MigrateAsync();
+}
+
+await IdentitySeeder.SeedAsync(app.Services);
 await IdentitySeeder.SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.

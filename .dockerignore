@@ -1,0 +1,14 @@
+.git
+.github
+**/bin
+**/obj
+**/node_modules
+**/node_modules/**
+src/fieldops-web/node_modules
+src/fieldops-web/node_modules/**
+src/fieldops-web/dist
+tests
+docs
+*.md
+*.bak
+backups/

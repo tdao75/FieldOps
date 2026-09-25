@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - fieldops-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
     healthcheck:
       test:
         - CMD-SHELL
@@ -47,7 +48,7 @@ services:
       - "1025:1025"
       - "8025:8025"
     restart: unless-stopped
-    
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: fieldops-pgadmin
@@ -62,8 +63,124 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
-    
+
+  technicians-api:
+    image: fieldops-technicians:local
+    build:
+      context: .
+      dockerfile: src/FieldOps.Technicians.Api/Dockerfile
+    container_name: fieldops-technicians-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__TechniciansDatabase: Host=postgres;Port=5432;Database=fieldops_technicians;Username=fieldops;Password=fieldops_dev_password
+    ports:
+      - "5072:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  identity-api:
+    image: fieldops-identity:local
+    build:
+      context: .
+      dockerfile: src/FieldOps.Identity.Api/Dockerfile
+    container_name: fieldops-identity-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__IdentityDatabase: Host=postgres;Port=5432;Database=fieldops_identity;Username=fieldops;Password=fieldops_dev_password
+    ports:
+      - "5090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  workorders-api:
+    image: fieldops-workorders:local
+    build:
+      context: .
+      dockerfile: src/FieldOps.WorkOrders.Api/Dockerfile
+    container_name: fieldops-workorders-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__WorkOrdersDatabase: Host=postgres;Port=5432;Database=fieldops_workorders;Username=fieldops;Password=fieldops_dev_password
+      RabbitMq__HostName: rabbitmq
+      ServiceUrls__TechniciansApi: http://technicians-api:8080/
+    ports:
+      - "5062:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      technicians-api:
+        condition: service_started
+    restart: unless-stopped
+
+  notification-worker:
+    image: fieldops-notification-worker:local
+    build:
+      context: .
+      dockerfile: src/FieldOps.Notification.Worker/Dockerfile
+    container_name: fieldops-notification-worker
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__NotificationsDatabase: Data Source=/data/fieldops-notifications.db
+      RabbitMq__HostName: rabbitmq
+      Smtp__Host: mailpit
+    volumes:
+      - fieldops-notification-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    restart: unless-stopped
+
+  gateway:
+    image: fieldops-gateway:local
+    build:
+      context: .
+      dockerfile: src/FieldOps.ApiGateway/Dockerfile
+    container_name: fieldops-gateway
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ReverseProxy__Clusters__work-orders-cluster__Destinations__primary__Address: http://workorders-api:8080/
+      ReverseProxy__Clusters__technicians-cluster__Destinations__primary__Address: http://technicians-api:8080/
+      ReverseProxy__Clusters__identity-cluster__Destinations__identity-api__Address: http://identity-api:8080/
+    ports:
+      - "5080:8080"
+    depends_on:
+      workorders-api:
+        condition: service_started
+      technicians-api:
+        condition: service_started
+      identity-api:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    image: fieldops-web:local
+    build:
+      context: .
+      dockerfile: src/fieldops-web/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:5080
+    container_name: fieldops-web
+    ports:
+      - "5174:80"
+    depends_on:
+      gateway:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   fieldops-postgres-data:
   fieldops-rabbitmq-data:
   fieldops-pgadmin-data:
+  fieldops-notification-data:

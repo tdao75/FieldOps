@@ -3,11 +3,11 @@ using System.Net;
 
 namespace FieldOps.WorkOrders.Api.Tests
 {
-    public sealed class HealthEndpointTests:IClassFixture<WebApplicationFactory<Program>>
+    public sealed class HealthEndpointTests:IClassFixture<WorkOrdersApiFactory>
     {
         private readonly HttpClient _client;
 
-        public HealthEndpointTests(WebApplicationFactory<Program> factory)
+        public HealthEndpointTests(WorkOrdersApiFactory factory)
         {
             _client = factory.CreateClient(
            new WebApplicationFactoryClientOptions
