@@ -19,7 +19,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
         private readonly ILogger<WorkOrdersController> _logger;
 
         private readonly TechniciansClient _techniciansClient;
-                
+
         public WorkOrdersController(WorkOrdersDbContext context, ILogger<WorkOrdersController> logger, TechniciansClient techniciansClient)
         {
             _dbContext = context;
@@ -29,21 +29,19 @@ namespace FieldOps.WorkOrders.Api.Controllers
 
         [HttpGet]
         public async Task<ActionResult<PagedWorkOrdersResponse>> GetAll(
-    [FromQuery] int pageNumber = 1,
-    [FromQuery] int pageSize = 10,
-    [FromQuery] string? search = null,
-    [FromQuery] WorkOrderStatus? status = null,
-    [FromQuery] WorkOrderPriority? priority = null,
-    CancellationToken cancellationToken = default)
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null,
+            [FromQuery] WorkOrderStatus? status = null,
+            [FromQuery] WorkOrderPriority? priority = null,
+            CancellationToken cancellationToken = default)
         {
             pageNumber = Math.Max(pageNumber, 1);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var baseQuery =
-                _dbContext.WorkOrders.AsNoTracking();
+            var baseQuery = _dbContext.WorkOrders.AsNoTracking();
 
-            var allCount = await baseQuery.CountAsync(
-                cancellationToken);
+            var allCount = await baseQuery.CountAsync(cancellationToken);
 
             var openCount = await baseQuery.CountAsync(
                 x => x.Status != WorkOrderStatus.Completed &&
@@ -60,41 +58,24 @@ namespace FieldOps.WorkOrders.Api.Controllers
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var searchTerm = $"%{search.Trim()}%";
+                var searchTerm = search.Trim().ToLowerInvariant();
 
-                filteredQuery = filteredQuery.Where(
-                    x =>
-                        EF.Functions.ILike(
-                            x.Title,
-                            searchTerm) ||
-                        EF.Functions.ILike(
-                            x.Location,
-                            searchTerm) ||
-                        (x.Description != null &&
-                         EF.Functions.ILike(
-                             x.Description,
-                             searchTerm)));
+                filteredQuery = filteredQuery.Where(x => x.Title.ToLower().Contains(searchTerm) || x.Location.ToLower().Contains(searchTerm) ||(x.Description != null && x.Description.ToLower().Contains(searchTerm)));
             }
 
             if (status.HasValue)
             {
-                filteredQuery = filteredQuery.Where(
-                    x => x.Status == status.Value);
+                filteredQuery = filteredQuery.Where(x => x.Status == status.Value);
             }
 
             if (priority.HasValue)
             {
-                filteredQuery = filteredQuery.Where(
-                    x => x.Priority == priority.Value);
+                filteredQuery = filteredQuery.Where(x => x.Priority == priority.Value);
             }
 
-            var totalCount = await filteredQuery.CountAsync(
-                cancellationToken);
+            var totalCount = await filteredQuery.CountAsync(cancellationToken);
 
-            var totalPages = totalCount == 0
-                ? 0
-                : (int)Math.Ceiling(
-                    totalCount / (double)pageSize);
+            var totalPages = totalCount == 0 ? 0: (int)Math.Ceiling(totalCount / (double)pageSize);
 
             // Prevent requesting a page beyond the filtered results.
             if (totalPages > 0 && pageNumber > totalPages)
@@ -155,14 +136,14 @@ namespace FieldOps.WorkOrders.Api.Controllers
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Work order {WorkOrderId} was created.",  workOrder.Id);
+            _logger.LogInformation("Work order {WorkOrderId} was created.", workOrder.Id);
 
             var response = MapToResponse(workOrder);
 
-            return CreatedAtRoute(routeName: "GetWorkOrderById",routeValues: new { id = workOrder.Id },value: response);
+            return CreatedAtRoute(routeName: "GetWorkOrderById", routeValues: new { id = workOrder.Id }, value: response);
         }
 
-        [Authorize (Roles = "Dispatcher,Administrator")]
+        [Authorize(Roles = "Dispatcher,Administrator")]
         [HttpPut("{id:guid}/status")]
         public async Task<ActionResult<WorkOrderResponse>> UpdateStatus(Guid id, UpdateWorkOrderStatusRequest request, CancellationToken cancellationToken)
         {
@@ -194,14 +175,14 @@ namespace FieldOps.WorkOrders.Api.Controllers
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Work order {WorkOrderId} status changed to {Status}.",workOrder.Id, workOrder.Status);
+            _logger.LogInformation("Work order {WorkOrderId} status changed to {Status}.", workOrder.Id, workOrder.Status);
 
             return Ok(MapToResponse(workOrder));
         }
 
         [Authorize(Roles = "Dispatcher,Administrator")]
         [HttpPut("{id:guid}/assignment")]
-        public async Task<ActionResult<WorkOrderResponse>> Assign(Guid id,AssignWorkOrderRequest request,CancellationToken cancellationToken)
+        public async Task<ActionResult<WorkOrderResponse>> Assign(Guid id, AssignWorkOrderRequest request, CancellationToken cancellationToken)
         {
             if (request.TechnicianId == Guid.Empty)
             {
@@ -210,7 +191,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
                 return ValidationProblem(ModelState);
             }
 
-            var workOrder = await _dbContext.WorkOrders.FirstOrDefaultAsync(x => x.Id == id,cancellationToken);
+            var workOrder = await _dbContext.WorkOrders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
             if (workOrder is null)
             {
@@ -286,7 +267,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Work order {WorkOrderId} assigned to technician {TechnicianId}.", workOrder.Id,request.TechnicianId);
+            _logger.LogInformation("Work order {WorkOrderId} assigned to technician {TechnicianId}.", workOrder.Id, request.TechnicianId);
 
             return Ok(MapToResponse(workOrder));
         }

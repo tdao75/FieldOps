@@ -16,7 +16,7 @@ namespace FieldOps.WorkOrders.Api.Tests
     public sealed class WorkOrdersApiFactory : WebApplicationFactory<Program>
     {
         public const string JwtKey = "FieldOps-integration-test-secret-key-2026";
-
+        private readonly string _databaseName = $"WorkOrdersTests-{Guid.NewGuid()}";
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
            builder.UseEnvironment("Testing");
@@ -49,7 +49,7 @@ namespace FieldOps.WorkOrders.Api.Tests
                 services.AddDbContext<WorkOrdersDbContext>(
                     options =>
                     {
-                        options.UseInMemoryDatabase($"WorkOrdersTests-{Guid.NewGuid()}");
+                        options.UseInMemoryDatabase(_databaseName);
                     });
 
                 services.AddAuthentication(options =>
