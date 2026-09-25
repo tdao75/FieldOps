@@ -1,5 +1,9 @@
 import { type FormEvent, useState } from "react";
-import { createTechnician } from "./api";
+import {
+  createTechnician,
+  deactivateTechnician,
+  updateTechnician,
+} from "./api";
 import type { CreateTechnicianRequest, Technician } from "./models";
 
 interface TechniciansPanelProps {
@@ -21,8 +25,9 @@ export default function TechniciansPanel({
 }: TechniciansPanelProps) {
   const [form, setForm] = useState<CreateTechnicianRequest>(initialForm);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -33,6 +38,28 @@ export default function TechniciansPanel({
     }));
   }
 
+  function beginEdit(technician: Technician) {
+    setEditingId(technician.id);
+
+    setForm({
+      firstName: technician.firstName,
+      lastName: technician.lastName,
+      email: technician.email,
+      phoneNumber: technician.phoneNumber ?? "",
+      skills: technician.skills ?? "",
+    });
+
+    setError("");
+    setSuccessMessage("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(initialForm);
+    setError("");
+    setSuccessMessage("");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -41,26 +68,71 @@ export default function TechniciansPanel({
       setError("");
       setSuccessMessage("");
 
-      await createTechnician({
+      const request = {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         phoneNumber: form.phoneNumber?.trim() || undefined,
         skills: form.skills?.trim() || undefined,
-      });
+      };
 
+      if (editingId) {
+        await updateTechnician(editingId, {
+          ...request,
+          isActive: true,
+        });
+
+        setSuccessMessage("Technician updated successfully.");
+      } else {
+        await createTechnician(request);
+
+        setSuccessMessage("Technician created successfully.");
+      }
+
+      setEditingId(null);
       setForm(initialForm);
-      setSuccessMessage("Technician created successfully.");
 
       await onCreated();
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Unable to create technician.",
+          : "Unable to save technician.",
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeactivate(technician: Technician) {
+    const confirmed = window.confirm(
+      `Deactivate ${technician.firstName} ${technician.lastName}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccessMessage("");
+
+      await deactivateTechnician(technician.id);
+
+      if (editingId === technician.id) {
+        setEditingId(null);
+        setForm(initialForm);
+      }
+
+      setSuccessMessage("Technician deactivated successfully.");
+
+      await onCreated();
+    } catch (deactivateError) {
+      setError(
+        deactivateError instanceof Error
+          ? deactivateError.message
+          : "Unable to deactivate technician.",
+      );
     }
   }
 
@@ -75,7 +147,7 @@ export default function TechniciansPanel({
 
       <div className="technicians-layout">
         <form className="technician-form" onSubmit={handleSubmit}>
-          <h3>Add technician</h3>
+          <h3>{editingId ? "Edit technician" : "Add technician"}</h3>
 
           <div className="name-fields">
             <label>
@@ -140,9 +212,25 @@ export default function TechniciansPanel({
 
           {successMessage && <p className="form-success">{successMessage}</p>}
 
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating…" : "Add technician"}
-          </button>
+          <div className="form-actions">
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? "Saving…"
+                : editingId
+                  ? "Save changes"
+                  : "Add technician"}
+            </button>
+
+            {editingId && (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
 
         <div className="technician-list">
@@ -172,7 +260,20 @@ export default function TechniciansPanel({
                   )}
                 </div>
 
-                <span className="active-badge">Active</span>
+                <div className="technician-actions">
+                  <span className="active-badge">Active</span>
+
+                  <button type="button" onClick={() => beginEdit(technician)}>
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleDeactivate(technician)}
+                  >
+                    Deactivate
+                  </button>
+                </div>
               </article>
             ))
           )}

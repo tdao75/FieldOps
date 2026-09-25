@@ -28,11 +28,39 @@ namespace FieldOps.WorkOrders.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<WorkOrderResponse>>> GetAll(CancellationToken cancellationToken)
+        public async Task<ActionResult<PagedWorkOrdersResponse>> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10,CancellationToken cancellationToken = default)
         {
-            var workOrders = await _dbContext.WorkOrders.AsNoTracking().OrderByDescending(x => x.CreatedAtUtc).Select(x => MapToResponse(x)).ToListAsync(cancellationToken);
-            
-            return Ok(workOrders);
+            pageNumber = Math.Max(pageNumber, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var query = _dbContext.WorkOrders.AsNoTracking();
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var openCount = await query.CountAsync(x => x.Status != WorkOrderStatus.Completed && x.Status != WorkOrderStatus.Cancelled, cancellationToken);
+
+            var emergencyCount = await query.CountAsync(x => x.Priority == WorkOrderPriority.Emergency && x.Status != WorkOrderStatus.Completed && x.Status != WorkOrderStatus.Cancelled, cancellationToken);
+
+            var items = await query
+                .OrderByDescending(x => x.CreatedAtUtc)
+                .ThenByDescending(x => x.Id)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(x => MapToResponse(x))
+                .ToListAsync(cancellationToken);
+
+            var totalPages = totalCount == 0 ? 0: (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            return Ok(new PagedWorkOrdersResponse
+            {
+                Items = items,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages,
+                OpenCount = openCount,
+                EmergencyCount = emergencyCount
+            });
         }
 
         [HttpGet("{id:guid}", Name = "GetWorkOrderById")]

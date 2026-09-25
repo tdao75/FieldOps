@@ -1,8 +1,10 @@
 import { getAccessToken, logout } from "./auth";
 import type {
   CreateTechnicianRequest,
+  UpdateTechnicianRequest,
   AssignWorkOrderRequest,
   CreateWorkOrderRequest,
+  PagedWorkOrdersResponse,
   Technician,
   WorkOrder,
 } from "./models";
@@ -95,8 +97,15 @@ async function putJson<TResponse, TRequest>(path: string, request: TRequest,): P
   return response.json() as Promise<TResponse>;
 }
 
-export function getWorkOrders(): Promise<WorkOrder[]> {
-  return getJson<WorkOrder[]>("/api/workorders");
+async function deleteRequest(path:string):Promise<void> {
+  const response = await apiFetch(path,{method:"DELETE",headers:{Accept:"application/json",},});
+  if(!response.ok){
+    const errorBody = await response.text();
+    throw new Error(errorBody ||`Request failed: ${response.status} ${response.statusText}`,);
+  }
+}
+export function getWorkOrders(pageNumber=1,pageSize=10): Promise<PagedWorkOrdersResponse> {
+  return getJson<PagedWorkOrdersResponse>(`/api/workorders?pageNumber=${pageNumber}&pageSize=${pageSize}`,);
 }
 
 export function getTechnicians(): Promise<Technician[]> {
@@ -117,4 +126,12 @@ export function assignWorkOrder(workOrderId: string, technicianId: string,): Pro
 
 export function createTechnician(request: CreateTechnicianRequest,): Promise<Technician> {
   return postJson<Technician, CreateTechnicianRequest>("/api/technicians", request,);
+}
+
+export function updateTechnician(technicianId:string,request:UpdateTechnicianRequest,):Promise<Technician>{
+  return putJson<Technician, UpdateTechnicianRequest>(`/api/technicians/${technicianId}`, request,);
+}
+
+export function deactivateTechnician(technicianId:string,):Promise<void>{
+  return deleteRequest(`/api/technicians/${technicianId}`,);
 }

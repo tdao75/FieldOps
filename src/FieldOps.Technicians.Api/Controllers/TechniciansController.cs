@@ -94,10 +94,78 @@ public sealed class TechniciansController : ControllerBase
         return CreatedAtRoute(routeName: "GetTechnicianById", routeValues: new { id = technician.Id }, value: response);
     }
 
-    
+    [Authorize(Roles = "Dispatcher,Administrator")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<TechnicianResponse>> Update(Guid id, UpdateTechnicianRequest request, CancellationToken cancellationToken)
+    {
+        var technician = await _dbContext.Technicians.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-    private static TechnicianResponse MapToResponse(
-        Technician technician)
+        if (technician is null)
+        {
+            return NotFound(new
+            {
+                message = $"Technician '{id}' was not found."
+            });
+        }
+
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+        var emailExists = await _dbContext.Technicians.AnyAsync(x => x.Id != id && x.Email == normalizedEmail, cancellationToken);
+
+        if (emailExists)
+        {
+            return Conflict(new
+            {
+                message = "Another technician already uses this email."
+            });
+        }
+
+        technician.FirstName = request.FirstName.Trim();
+        technician.LastName = request.LastName.Trim();
+        technician.Email = normalizedEmail;
+        technician.PhoneNumber = request.PhoneNumber?.Trim();
+        technician.Skills = request.Skills?.Trim();
+        technician.IsActive = request.IsActive;
+        technician.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Technician {TechnicianId} was updated.", technician.Id);
+
+        return Ok(MapToResponse(technician));
+    }
+
+    [Authorize(Roles = "Dispatcher,Administrator")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var technician = await _dbContext.Technicians.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+        if (technician is null)
+        {
+            return NotFound(new
+            {
+                message = $"Technician '{id}' was not found."
+            });
+        }
+
+        // DELETE is idempotent: an already inactive technician
+        // remains inactive and still returns success.
+        if (technician.IsActive)
+        {
+            technician.IsActive = false;
+            technician.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Technician {TechnicianId} was deactivated.", technician.Id);
+        }
+
+        return NoContent();
+    }
+
+
+    private static TechnicianResponse MapToResponse(Technician technician)
     {
         return new TechnicianResponse
         {

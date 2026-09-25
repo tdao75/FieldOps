@@ -41,3 +41,17 @@ export interface CreateTechnicianRequest{
   phoneNumber?:string;
   skills?:string;
 }
+
+export interface UpdateTechnicianRequest extends CreateTechnicianRequest{
+  isActive:boolean;
+}
+
+export interface PagedWorkOrdersResponse {
+  items: WorkOrder[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  openCount: number;
+  emergencyCount: number;
+}

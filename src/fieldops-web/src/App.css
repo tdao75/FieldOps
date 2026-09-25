@@ -637,3 +637,26 @@ td {
 .login-card .auth-switch:hover {
   background: #eff6ff;
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.pagination button {
+  min-width: 90px;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pagination span {
+  color: #475569;
+  font-size: 0.9rem;
+}

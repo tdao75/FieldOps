@@ -15,18 +15,28 @@ function Dashboard({ canManage }: DashboardProps) {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [openCount, setOpenCount] = useState(0);
+  const [emergencyCount, setEmergencyCount] = useState(0);
+  const pageSize = 10;
 
   const loadDashboard = useCallback(async () => {
     try {
-      setIsLoading(true);
+      //setIsLoading(true);
       setError("");
 
       const [workOrderData, technicianData] = await Promise.all([
-        getWorkOrders(),
+        getWorkOrders(pageNumber, pageSize),
         getTechnicians(),
       ]);
 
-      setWorkOrders(workOrderData);
+      setWorkOrders(workOrderData.items);
+      setTotalCount(workOrderData.totalCount);
+      setTotalPages(workOrderData.totalPages);
+      setOpenCount(workOrderData.openCount);
+      setEmergencyCount(workOrderData.emergencyCount);
       setTechnicians(technicianData);
     } catch (requestError) {
       setError(
@@ -37,22 +47,11 @@ function Dashboard({ canManage }: DashboardProps) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [pageNumber]);
 
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
-
-  const openCount = workOrders.filter(
-    (item) => item.status !== "Completed" && item.status !== "Cancelled",
-  ).length;
-
-  const emergencyCount = workOrders.filter(
-    (item) =>
-      item.priority === "Emergency" &&
-      item.status !== "Completed" &&
-      item.status !== "Cancelled",
-  ).length;
 
   if (isLoading) {
     return <main className="page-message">Loading FieldOps…</main>;
@@ -78,7 +77,7 @@ function Dashboard({ canManage }: DashboardProps) {
       <section className="summary-grid">
         <article className="summary-card">
           <span>Total work orders</span>
-          <strong>{workOrders.length}</strong>
+          <strong>{totalCount}</strong>
         </article>
 
         <article className="summary-card">
@@ -172,6 +171,33 @@ function Dashboard({ canManage }: DashboardProps) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {totalCount > 0 && (
+          <div className="pagination">
+            <button
+              type="button"
+              disabled={pageNumber <= 1}
+              onClick={() =>
+                setPageNumber((current) => Math.max(1, current - 1))
+              }
+            >
+              Previous
+            </button>
+
+            <span>
+              Page {pageNumber} of {Math.max(totalPages, 1)}
+            </span>
+
+            <button
+              type="button"
+              disabled={totalPages === 0 || pageNumber >= totalPages}
+              onClick={() =>
+                setPageNumber((current) => Math.min(totalPages, current + 1))
+              }
+            >
+              Next
+            </button>
           </div>
         )}
       </section>
