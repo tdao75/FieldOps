@@ -55,3 +55,7 @@ export interface PagedWorkOrdersResponse {
   openCount: number;
   emergencyCount: number;
 }
+
+export interface UpdateWorkOrderStatusRequest{
+  status:WorkOrderStatus;
+}

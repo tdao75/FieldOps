@@ -103,16 +103,29 @@ namespace FieldOps.WorkOrders.Api.Controllers
         }
 
         [Authorize (Roles = "Dispatcher,Administrator")]
-        [HttpPut("{id:guid}")]
+        [HttpPut("{id:guid}/status")]
         public async Task<ActionResult<WorkOrderResponse>> UpdateStatus(Guid id, UpdateWorkOrderStatusRequest request, CancellationToken cancellationToken)
         {
-            var workOrder = await _dbContext.WorkOrders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var workOrder = await _dbContext.WorkOrders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
             if (workOrder == null)
             {
                 return NotFound(new
                 {
                     message = $"Work order '{id}' was not found."
+                });
+            }
+            // Repeating the same request is safe.
+            if (workOrder.Status == request.Status)
+            {
+                return Ok(MapToResponse(workOrder));
+            }
+
+            if (!IsValidStatusTransition(workOrder.Status, request.Status))
+            {
+                return Conflict(new
+                {
+                    message = $"Work order status cannot change from " + $"'{workOrder.Status}' to '{request.Status}'."
                 });
             }
 
@@ -232,6 +245,24 @@ namespace FieldOps.WorkOrders.Api.Controllers
                 workOrder.AssignedTechnicianId,
                 CreatedAtUtc = workOrder.CreatedAtUtc,
                 UpdatedAtUtc = workOrder.UpdatedAtUtc
+            };
+        }
+        private static bool IsValidStatusTransition(WorkOrderStatus currentStatus, WorkOrderStatus newStatus)
+        {
+            return currentStatus switch
+            {
+                WorkOrderStatus.Submitted => newStatus == WorkOrderStatus.Cancelled,
+
+                WorkOrderStatus.Assigned => newStatus is WorkOrderStatus.InProgress or WorkOrderStatus.Cancelled,
+
+                WorkOrderStatus.InProgress => newStatus is WorkOrderStatus.WaitingForParts or WorkOrderStatus.Completed or WorkOrderStatus.Cancelled,
+
+                WorkOrderStatus.WaitingForParts => newStatus is WorkOrderStatus.InProgress or WorkOrderStatus.Completed or WorkOrderStatus.Cancelled,
+
+                WorkOrderStatus.Completed => false,
+                WorkOrderStatus.Cancelled => false,
+
+                _ => false
             };
         }
     }

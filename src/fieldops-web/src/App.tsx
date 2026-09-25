@@ -3,6 +3,7 @@ import Dashboard from "./Dashboard";
 import LoginPage from "./LoginPage";
 import { getCurrentUser, logout, type AuthenticatedUser } from "./auth";
 
+
 export default function App() {
   const [user, setUser] = useState<AuthenticatedUser | null>(() =>
     getCurrentUser(),

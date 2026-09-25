@@ -660,3 +660,30 @@ td {
   color: #475569;
   font-size: 0.9rem;
 }
+
+.status-control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.status-actions select {
+  min-width: 145px;
+  padding: 0.4rem;
+}
+
+.status-actions button {
+  padding: 0.4rem 0.65rem;
+}
+
+.status-control .form-error {
+  max-width: 240px;
+  font-size: 0.75rem;
+}

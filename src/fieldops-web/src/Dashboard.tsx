@@ -4,6 +4,7 @@ import type { Technician, WorkOrder } from "./models";
 import CreateWorkOrderForm from "./CreateWorkOrderForm";
 import AssignmentControl from "./AssignmentControl";
 import TechniciansPanel from "./TechniciansPanel";
+import WorkOrderStatusControl from "./WorkOrderStatusControl";
 import "./App.css";
 
 interface DashboardProps {
@@ -147,7 +148,10 @@ function Dashboard({ canManage }: DashboardProps) {
                       </span>
                     </td>
                     <td>
-                      <span className="badge status">{workOrder.status}</span>
+                      <WorkOrderStatusControl
+                        workOrder={workOrder}
+                        onUpdated={loadDashboard}
+                      />
                     </td>
                     <td>
                       {canManage ? (

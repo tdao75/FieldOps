@@ -7,7 +7,11 @@ import type {
   PagedWorkOrdersResponse,
   Technician,
   WorkOrder,
+  UpdateWorkOrderStatusRequest,
+  WorkOrderStatus,
 } from "./models";
+
+
 
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5080";
@@ -134,4 +138,9 @@ export function updateTechnician(technicianId:string,request:UpdateTechnicianReq
 
 export function deactivateTechnician(technicianId:string,):Promise<void>{
   return deleteRequest(`/api/technicians/${technicianId}`,);
+}
+
+export function updateWorkOrderStatus(workOrderId:string,status:WorkOrderStatus,):Promise<WorkOrder>{
+  const request:UpdateWorkOrderStatusRequest ={status,};
+  return putJson<WorkOrder,UpdateWorkOrderStatusRequest>(`/api/workorders/${workOrderId}/status`, request,);
 }
