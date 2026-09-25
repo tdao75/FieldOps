@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { getTechnicians, getWorkOrders } from "./api";
-import type { Technician, WorkOrder } from "./models";
+import type {
+  Technician,
+  WorkOrder,
+  WorkOrderPriority,
+  WorkOrderStatus,
+} from "./models";
 import CreateWorkOrderForm from "./CreateWorkOrderForm";
 import AssignmentControl from "./AssignmentControl";
 import TechniciansPanel from "./TechniciansPanel";
@@ -22,6 +27,14 @@ function Dashboard({ canManage }: DashboardProps) {
   const [openCount, setOpenCount] = useState(0);
   const [emergencyCount, setEmergencyCount] = useState(0);
   const pageSize = 10;
+  const [allCount, setAllCount] = useState(0);
+
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<WorkOrderStatus | "">("");
+  const [priorityFilter, setPriorityFilter] = useState<WorkOrderPriority | "">(
+    "",
+  );
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -29,11 +42,18 @@ function Dashboard({ canManage }: DashboardProps) {
       setError("");
 
       const [workOrderData, technicianData] = await Promise.all([
-        getWorkOrders(pageNumber, pageSize),
+        getWorkOrders(
+          pageNumber,
+          pageSize,
+          search,
+          statusFilter,
+          priorityFilter,
+        ),
         getTechnicians(),
       ]);
 
       setWorkOrders(workOrderData.items);
+      setAllCount(workOrderData.allCount);
       setTotalCount(workOrderData.totalCount);
       setTotalPages(workOrderData.totalPages);
       setOpenCount(workOrderData.openCount);
@@ -48,11 +68,35 @@ function Dashboard({ canManage }: DashboardProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [pageNumber]);
+  }, [pageNumber, search, statusFilter, priorityFilter]);
 
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
+
+  function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPageNumber(1);
+    setSearch(searchInput.trim());
+  }
+
+  function changeStatusFilter(value: WorkOrderStatus | "") {
+    setStatusFilter(value);
+    setPageNumber(1);
+  }
+
+  function changePriorityFilter(value: WorkOrderPriority | "") {
+    setPriorityFilter(value);
+    setPageNumber(1);
+  }
+
+  function clearFilters() {
+    setSearchInput("");
+    setSearch("");
+    setStatusFilter("");
+    setPriorityFilter("");
+    setPageNumber(1);
+  }
 
   if (isLoading) {
     return <main className="page-message">Loading FieldOps…</main>;
@@ -78,7 +122,7 @@ function Dashboard({ canManage }: DashboardProps) {
       <section className="summary-grid">
         <article className="summary-card">
           <span>Total work orders</span>
-          <strong>{totalCount}</strong>
+          <strong>{allCount}</strong>
         </article>
 
         <article className="summary-card">
@@ -119,7 +163,47 @@ function Dashboard({ canManage }: DashboardProps) {
             <h2>Work orders</h2>
           </div>
         </div>
-
+        <form className="work-order-filters" onSubmit={handleFilterSubmit}>
+          <input
+            type="search"
+            value={searchInput}
+            placeholder="Search title, location or description"
+            onChange={(event) => setSearchInput(event.target.value)}
+          ></input>
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              changeStatusFilter(event.target.value as WorkOrderStatus | "")
+            }
+          >
+            <option value="">All statuses</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Assigned">Assigned</option>
+            <option value="InProgress">In Progress</option>
+            <option value="WaitingForParts">Waiting for Parts</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <select
+            value={priorityFilter}
+            onChange={(event) =>
+              changePriorityFilter(event.target.value as WorkOrderPriority | "")
+            }
+          >
+            <option value="">All priorities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Emergency">Emergency</option>
+          </select>
+          <button type="submit">Search</button>
+          <button type="button" onClick={clearFilters}>
+            Clear
+          </button>
+          <span className="filter-result-count">
+            {totalCount} {totalCount === 1 ? "result" : "results"}
+          </span>
+        </form>
         {workOrders.length === 0 ? (
           <p className="empty-message">No work orders found.</p>
         ) : (

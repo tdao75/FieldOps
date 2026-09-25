@@ -15,5 +15,6 @@
         public int OpenCount { get; init; }
 
         public int EmergencyCount { get; init; }
+        public int AllCount { get; init; }
     }
 }

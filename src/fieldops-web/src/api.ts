@@ -9,6 +9,7 @@ import type {
   WorkOrder,
   UpdateWorkOrderStatusRequest,
   WorkOrderStatus,
+  WorkOrderPriority,
 } from "./models";
 
 
@@ -108,8 +109,26 @@ async function deleteRequest(path:string):Promise<void> {
     throw new Error(errorBody ||`Request failed: ${response.status} ${response.statusText}`,);
   }
 }
-export function getWorkOrders(pageNumber=1,pageSize=10): Promise<PagedWorkOrdersResponse> {
-  return getJson<PagedWorkOrdersResponse>(`/api/workorders?pageNumber=${pageNumber}&pageSize=${pageSize}`,);
+
+export function getWorkOrders(
+  pageNumber = 1,
+  pageSize = 10,
+  search = "",
+  status: WorkOrderStatus | "" = "",
+  priority: WorkOrderPriority | "" = "",
+): Promise<PagedWorkOrdersResponse> {
+  const parameters = new URLSearchParams({
+    pageNumber: pageNumber.toString(),
+    pageSize: pageSize.toString(),
+  });
+
+  if (search.trim()) { parameters.set("search", search.trim());}
+
+  if (status) { parameters.set("status", status); }
+
+  if (priority) { parameters.set("priority", priority);}
+
+  return getJson<PagedWorkOrdersResponse>(`/api/workorders?${parameters.toString()}`,);
 }
 
 export function getTechnicians(): Promise<Technician[]> {

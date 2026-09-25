@@ -687,3 +687,184 @@ td {
   max-width: 240px;
   font-size: 0.75rem;
 }
+
+.work-order-filters {
+  display: grid;
+  grid-template-columns:
+    minmax(240px, 1fr) auto auto auto auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.work-order-filters input,
+.work-order-filters select {
+  padding: 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.filter-result-count {
+  color: #64748b;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .work-order-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Work-order filters */
+
+.work-order-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.work-order-filters input,
+.work-order-filters select {
+  height: 40px;
+  padding: 0 0.75rem;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  font: inherit;
+}
+
+.work-order-filters input {
+  flex: 1 1 280px;
+  min-width: 220px;
+}
+
+.work-order-filters select {
+  min-width: 150px;
+}
+
+.work-order-filters input:focus,
+.work-order-filters select:focus {
+  border-color: #2563eb;
+  outline: 2px solid rgb(37 99 235 / 15%);
+}
+
+.work-order-filters button {
+  height: 40px;
+  padding: 0 1rem;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2563eb;
+  border: 0;
+  border-radius: 7px;
+}
+
+.work-order-filters button[type="button"] {
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+
+.work-order-filters button:hover {
+  background: #1d4ed8;
+}
+
+.work-order-filters button[type="button"]:hover {
+  background: #f1f5f9;
+}
+
+.filter-result-count {
+  margin-left: auto;
+  color: #64748b;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* Technician buttons */
+
+.technician-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.technician-actions button {
+  padding: 0.45rem 0.75rem;
+  color: #1e40af;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+}
+
+.technician-actions button:last-child {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.technician-actions button:hover {
+  filter: brightness(0.97);
+}
+
+/* Status controls */
+
+.status-actions select {
+  height: 36px;
+  padding: 0 0.6rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.status-actions button {
+  height: 36px;
+  padding: 0 0.75rem;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2563eb;
+  border: 0;
+  border-radius: 6px;
+}
+
+.status-actions button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  background: #e2e8f0;
+}
+
+/* Responsive layout */
+
+@media (max-width: 800px) {
+  .work-order-filters {
+    align-items: stretch;
+  }
+
+  .work-order-filters input,
+  .work-order-filters select,
+  .work-order-filters button {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .filter-result-count {
+    margin-left: 0;
+  }
+
+  .technician-actions {
+    flex-wrap: wrap;
+  }
+}

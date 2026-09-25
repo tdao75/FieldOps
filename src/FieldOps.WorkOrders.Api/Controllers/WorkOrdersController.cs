@@ -28,28 +28,87 @@ namespace FieldOps.WorkOrders.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<PagedWorkOrdersResponse>> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10,CancellationToken cancellationToken = default)
+        public async Task<ActionResult<PagedWorkOrdersResponse>> GetAll(
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 10,
+    [FromQuery] string? search = null,
+    [FromQuery] WorkOrderStatus? status = null,
+    [FromQuery] WorkOrderPriority? priority = null,
+    CancellationToken cancellationToken = default)
         {
             pageNumber = Math.Max(pageNumber, 1);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var query = _dbContext.WorkOrders.AsNoTracking();
+            var baseQuery =
+                _dbContext.WorkOrders.AsNoTracking();
 
-            var totalCount = await query.CountAsync(cancellationToken);
+            var allCount = await baseQuery.CountAsync(
+                cancellationToken);
 
-            var openCount = await query.CountAsync(x => x.Status != WorkOrderStatus.Completed && x.Status != WorkOrderStatus.Cancelled, cancellationToken);
+            var openCount = await baseQuery.CountAsync(
+                x => x.Status != WorkOrderStatus.Completed &&
+                     x.Status != WorkOrderStatus.Cancelled,
+                cancellationToken);
 
-            var emergencyCount = await query.CountAsync(x => x.Priority == WorkOrderPriority.Emergency && x.Status != WorkOrderStatus.Completed && x.Status != WorkOrderStatus.Cancelled, cancellationToken);
+            var emergencyCount = await baseQuery.CountAsync(
+                x => x.Priority == WorkOrderPriority.Emergency &&
+                     x.Status != WorkOrderStatus.Completed &&
+                     x.Status != WorkOrderStatus.Cancelled,
+                cancellationToken);
 
-            var items = await query
+            var filteredQuery = baseQuery;
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchTerm = $"%{search.Trim()}%";
+
+                filteredQuery = filteredQuery.Where(
+                    x =>
+                        EF.Functions.ILike(
+                            x.Title,
+                            searchTerm) ||
+                        EF.Functions.ILike(
+                            x.Location,
+                            searchTerm) ||
+                        (x.Description != null &&
+                         EF.Functions.ILike(
+                             x.Description,
+                             searchTerm)));
+            }
+
+            if (status.HasValue)
+            {
+                filteredQuery = filteredQuery.Where(
+                    x => x.Status == status.Value);
+            }
+
+            if (priority.HasValue)
+            {
+                filteredQuery = filteredQuery.Where(
+                    x => x.Priority == priority.Value);
+            }
+
+            var totalCount = await filteredQuery.CountAsync(
+                cancellationToken);
+
+            var totalPages = totalCount == 0
+                ? 0
+                : (int)Math.Ceiling(
+                    totalCount / (double)pageSize);
+
+            // Prevent requesting a page beyond the filtered results.
+            if (totalPages > 0 && pageNumber > totalPages)
+            {
+                pageNumber = totalPages;
+            }
+
+            var items = await filteredQuery
                 .OrderByDescending(x => x.CreatedAtUtc)
                 .ThenByDescending(x => x.Id)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => MapToResponse(x))
                 .ToListAsync(cancellationToken);
-
-            var totalPages = totalCount == 0 ? 0: (int)Math.Ceiling(totalCount / (double)pageSize);
 
             return Ok(new PagedWorkOrdersResponse
             {
@@ -58,6 +117,7 @@ namespace FieldOps.WorkOrders.Api.Controllers
                 PageSize = pageSize,
                 TotalCount = totalCount,
                 TotalPages = totalPages,
+                AllCount = allCount,
                 OpenCount = openCount,
                 EmergencyCount = emergencyCount
             });
