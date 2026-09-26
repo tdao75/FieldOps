@@ -8,6 +8,8 @@ using FieldOps.Contracts.Events;
 using System.Text.Json;
 using FieldOps.WorkOrders.Api.Clients;
 using Microsoft.AspNetCore.Authorization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace FieldOps.WorkOrders.Api.Controllers
 {
@@ -134,6 +136,14 @@ namespace FieldOps.WorkOrders.Api.Controllers
 
             _dbContext.WorkOrders.Add(workOrder);
 
+            _dbContext.WorkOrderAuditEntries.Add(
+                CreateAuditEntry(
+                    workOrder.Id,
+                    WorkOrderAuditAction.Created,
+                    previousStatus: null,
+                    newStatus: workOrder.Status,
+                    occurredAtUtc: workOrder.CreatedAtUtc));
+
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Work order {WorkOrderId} was created.", workOrder.Id);
@@ -170,8 +180,23 @@ namespace FieldOps.WorkOrders.Api.Controllers
                 });
             }
 
+            var previousStatus = workOrder.Status;
+            var occurredAtUtc = DateTime.UtcNow;
+
             workOrder.Status = request.Status;
             workOrder.UpdatedAtUtc = DateTime.UtcNow;
+
+            _dbContext.WorkOrderAuditEntries.Add(
+                CreateAuditEntry(
+                    workOrder.Id,
+                    WorkOrderAuditAction.StatusChanged,
+                    previousStatus,
+                    request.Status,
+                    previousTechnicianId:
+                        workOrder.AssignedTechnicianId,
+                    newTechnicianId:
+                        workOrder.AssignedTechnicianId,
+                    occurredAtUtc));
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -238,6 +263,8 @@ namespace FieldOps.WorkOrders.Api.Controllers
 
 
             var occurredAtUtc = DateTime.UtcNow;
+            var previousStatus = workOrder.Status;
+            var previousTechnicianId = workOrder.AssignedTechnicianId;
 
             workOrder.AssignedTechnicianId = request.TechnicianId;
             workOrder.Status = WorkOrderStatus.Assigned;
@@ -263,6 +290,18 @@ namespace FieldOps.WorkOrders.Api.Controllers
                 OccurredAtUtc = occurredAtUtc
             };
 
+            var auditAction = previousTechnicianId.HasValue ? WorkOrderAuditAction.Reassigned : WorkOrderAuditAction.Assigned;
+
+            _dbContext.WorkOrderAuditEntries.Add(
+                CreateAuditEntry(
+                    workOrder.Id,
+                    auditAction,
+                    previousStatus,
+                    WorkOrderStatus.Assigned,
+                    previousTechnicianId,
+                    request.TechnicianId,
+                    occurredAtUtc));
+
             _dbContext.OutboxMessages.Add(outboxMessage);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -270,6 +309,130 @@ namespace FieldOps.WorkOrders.Api.Controllers
             _logger.LogInformation("Work order {WorkOrderId} assigned to technician {TechnicianId}.", workOrder.Id, request.TechnicianId);
 
             return Ok(MapToResponse(workOrder));
+        }
+
+        [Authorize(Roles ="Dispatcher,Adminstrator")]
+        [HttpPut("{id:guid}/details")]
+        public async Task<ActionResult<WorkOrderResponse>> UpdateDetails(Guid id, UpdateWorkOrderDetailsRequest request, CancellationToken cancellationToken)
+        {
+            var workOrder = await _dbContext.WorkOrders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if(workOrder is null)
+            {
+                return NotFound(new
+                {
+                    message = $"Work order '{id}' was not found."
+                });
+            }
+            if(workOrder.Status is WorkOrderStatus.Completed or WorkOrderStatus.Cancelled)
+            {
+                return Conflict(new
+                {
+                    message = "Completed or cancelled work orders cannot be edited."
+                });
+            }
+
+            var title = request.Title.Trim();
+            var description = request.Description?.Trim();
+            var location = request.Location.Trim();
+
+            // Repeating an identical request should not create
+            // another audit record.
+            var hasChanges =
+                workOrder.Title != title ||
+                workOrder.Description != description ||
+                workOrder.Location != location ||
+                workOrder.Priority != request.Priority;
+
+            if (!hasChanges)
+            {
+                return Ok(MapToResponse(workOrder));
+            }
+
+            var occurredAtUtc = DateTime.UtcNow;
+
+            workOrder.Title = title;
+            workOrder.Description = description;
+            workOrder.Location = location;
+            workOrder.Priority = request.Priority;
+            workOrder.UpdatedAtUtc = occurredAtUtc;
+
+            _dbContext.WorkOrderAuditEntries.Add(
+                CreateAuditEntry(
+                    workOrder.Id,
+                    WorkOrderAuditAction.DetailsUpdated,
+                    previousStatus: workOrder.Status,
+                    newStatus: workOrder.Status,
+                    previousTechnicianId:
+                        workOrder.AssignedTechnicianId,
+                    newTechnicianId:
+                        workOrder.AssignedTechnicianId,
+                    occurredAtUtc));
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Work order {WorkOrderId} details were updated.", workOrder.Id);
+
+            return Ok(MapToResponse(workOrder));
+        }
+
+
+        private WorkOrderAuditEntry CreateAuditEntry(Guid workOrderId,
+                WorkOrderAuditAction action,
+                WorkOrderStatus? previousStatus,
+                WorkOrderStatus? newStatus,
+                Guid? previousTechnicianId = null,
+                Guid? newTechnicianId = null,
+                DateTime? occurredAtUtc = null)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(JwtRegisteredClaimNames.Email);
+
+            return new WorkOrderAuditEntry
+            {
+                WorkOrderId = workOrderId,
+                Action = action,
+                PreviousStatus = previousStatus,
+                NewStatus = newStatus,
+                PreviousTechnicianId = previousTechnicianId,
+                NewTechnicianId = newTechnicianId,
+                ChangedByUserId = userId,
+                ChangedByEmail = email,
+                OccurredAtUtc = occurredAtUtc ?? DateTime.UtcNow
+            };
+        }
+
+        [Authorize(Roles = "Technician,Dispatcher,Administrator")]
+        [HttpGet("{id:guid}/history")]
+        public async Task<ActionResult<IReadOnlyList<WorkOrderAuditResponse>>> GetHistory(Guid id, CancellationToken cancellationToken)
+        {
+            var workOrderExist = await _dbContext.WorkOrders.AsNoTracking().AnyAsync(x => x.Id == id, cancellationToken);
+
+            if (!workOrderExist)
+            {
+                return NotFound(new
+                {
+                    message = $"Work order '{id}' was not found."
+                });
+            }
+
+            var history = await _dbContext.WorkOrderAuditEntries.AsNoTracking().Where(x => x.WorkOrderId == id)
+                .OrderBy(x => x.OccurredAtUtc)
+                .ThenBy(x => x.Id)
+                .Select(x => new WorkOrderAuditResponse
+                {
+                    Id = x.Id,
+                    WorkOrderId = x.WorkOrderId,
+                    Action = x.Action,
+                    PreviousStatus = x.PreviousStatus,
+                    NewStatus = x.NewStatus,
+                    PreviousTechnicianId =x.PreviousTechnicianId,
+                    NewTechnicianId = x.NewTechnicianId,
+                    ChangedByUserId =x.ChangedByUserId,
+                    ChangedByEmail = x.ChangedByEmail,
+                    OccurredAtUtc = x.OccurredAtUtc
+                }).ToListAsync(cancellationToken);
+
+            return Ok(history);
         }
 
         private static WorkOrderResponse MapToResponse(WorkOrder workOrder)

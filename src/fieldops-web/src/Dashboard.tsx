@@ -10,6 +10,8 @@ import CreateWorkOrderForm from "./CreateWorkOrderForm";
 import AssignmentControl from "./AssignmentControl";
 import TechniciansPanel from "./TechniciansPanel";
 import WorkOrderStatusControl from "./WorkOrderStatusControl";
+import EditWorkOrderControl from "./EditWorkOrderControl";
+import WorkOrderHistoryControl from "./WorkOrderHistoryControl";
 import "./App.css";
 
 interface DashboardProps {
@@ -217,6 +219,7 @@ function Dashboard({ canManage }: DashboardProps) {
                   <th>Status</th>
                   <th>Technician</th>
                   <th>Created</th>
+                  {canManage && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -254,6 +257,18 @@ function Dashboard({ canManage }: DashboardProps) {
                     </td>
                     <td>
                       {new Date(workOrder.createdAtUtc).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <WorkOrderHistoryControl workOrder={workOrder} />
+
+                        {canManage && (
+                          <EditWorkOrderControl
+                            workOrder={workOrder}
+                            onUpdated={loadDashboard}
+                          />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

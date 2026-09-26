@@ -8,6 +8,8 @@ namespace FieldOps.WorkOrders.Api.Data
         {
         }
         public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+
+        public DbSet<WorkOrderAuditEntry> WorkOrderAuditEntries => Set<WorkOrderAuditEntry>();
         public DbSet<OutboxMessage> OutboxMessages =>Set<OutboxMessage>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -39,6 +41,31 @@ namespace FieldOps.WorkOrders.Api.Data
                 x.ProcessedAtUtc,
                 x.OccurredAtUtc
             });
+
+            var auditEntry =modelBuilder.Entity<WorkOrderAuditEntry>();
+
+            auditEntry.HasKey(x => x.Id);
+
+            auditEntry.Property(x => x.Action).HasConversion<string>().HasMaxLength(50).IsRequired();
+
+            auditEntry.Property(x => x.PreviousStatus).HasConversion<string>().HasMaxLength(30);
+
+            auditEntry.Property(x => x.NewStatus).HasConversion<string>().HasMaxLength(30);
+
+            auditEntry.Property(x => x.ChangedByUserId).HasMaxLength(100);
+
+            auditEntry.Property(x => x.ChangedByEmail).HasMaxLength(320);
+
+            auditEntry.HasIndex(x => new
+            {
+                x.WorkOrderId,
+                x.OccurredAtUtc
+            });
+
+            auditEntry.HasOne<WorkOrder>()
+                .WithMany()
+                .HasForeignKey(x => x.WorkOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

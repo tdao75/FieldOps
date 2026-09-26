@@ -10,6 +10,8 @@ import type {
   UpdateWorkOrderStatusRequest,
   WorkOrderStatus,
   WorkOrderPriority,
+  UpdateWorkOrderDetailsRequest,
+  WorkOrderAuditEntry,
 } from "./models";
 
 
@@ -162,4 +164,12 @@ export function deactivateTechnician(technicianId:string,):Promise<void>{
 export function updateWorkOrderStatus(workOrderId:string,status:WorkOrderStatus,):Promise<WorkOrder>{
   const request:UpdateWorkOrderStatusRequest ={status,};
   return putJson<WorkOrder,UpdateWorkOrderStatusRequest>(`/api/workorders/${workOrderId}/status`, request,);
+}
+
+export function updateWorkOrderDetails(workOrderId: string, request: UpdateWorkOrderDetailsRequest,): Promise<WorkOrder> {
+  return putJson<WorkOrder,UpdateWorkOrderDetailsRequest>(`/api/workorders/${workOrderId}/details`,request,);
+}
+
+export function getWorkOrderHistory(workOrderId:string,):Promise<WorkOrderAuditEntry[]>{
+  return getJson<WorkOrderAuditEntry[]>(`/api/workorders/${workOrderId}/history`,);
 }

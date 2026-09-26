@@ -60,3 +60,25 @@ export interface PagedWorkOrdersResponse {
 export interface UpdateWorkOrderStatusRequest{
   status:WorkOrderStatus;
 }
+
+export interface UpdateWorkOrderDetailsRequest{
+  title: string;
+  description?: string;
+  location: string;
+  priority: WorkOrderPriority;
+}
+
+export type WorkOrderAuditAction= | "Created"| "DetailsUpdated"| "Assigned"| "Reassigned"| "StatusChanged";
+
+export interface WorkOrderAuditEntry{
+  id: string;
+  workOrderId: string;
+  action: WorkOrderAuditAction;
+  previousStatus?: WorkOrderStatus;
+  newStatus?: WorkOrderStatus;
+  previousTechnicianId?: string;
+  newTechnicianId?: string;
+  changedByUserId?: string;
+  changedByEmail?: string;
+  occurredAtUtc: string;
+}

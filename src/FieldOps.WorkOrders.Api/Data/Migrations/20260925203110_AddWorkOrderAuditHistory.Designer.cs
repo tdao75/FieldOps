@@ -3,6 +3,7 @@ using System;
 using FieldOps.WorkOrders.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FieldOps.WorkOrders.Api.Data.Migrations
 {
     [DbContext(typeof(WorkOrdersDbContext))]
-    partial class WorkOrdersDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260925203110_AddWorkOrderAuditHistory")]
+    partial class AddWorkOrderAuditHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -150,7 +153,7 @@ namespace FieldOps.WorkOrders.Api.Data.Migrations
 
                     b.HasIndex("WorkOrderId", "OccurredAtUtc");
 
-                    b.ToTable("WorkOrderAuditEntries");
+                    b.ToTable("workOrderAuditEntries");
                 });
 
             modelBuilder.Entity("FieldOps.WorkOrders.Api.Models.WorkOrderAuditEntry", b =>
