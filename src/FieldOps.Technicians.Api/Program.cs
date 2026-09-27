@@ -43,7 +43,22 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddHealthChecks();
 
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Instance = context.HttpContext.Request.Path;
+
+        context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+    };
+});
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.UseStatusCodePages();
+
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();

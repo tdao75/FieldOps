@@ -498,3 +498,6 @@ appsettings.Local.json
 
 # Backup files
 *.bak
+backups/
+
+*.Development.local.json

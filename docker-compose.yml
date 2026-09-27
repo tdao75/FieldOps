@@ -4,8 +4,8 @@ services:
     container_name: fieldops-postgres
     environment:
       POSTGRES_DB: fieldops_workorders
-      POSTGRES_USER: fieldops
-      POSTGRES_PASSWORD: fieldops_dev_password
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -14,7 +14,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U fieldops -d fieldops_workorders
+        - pg_isready -U ${POSTGRES_USER} -d fieldops_workorders
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,8 +24,8 @@ services:
     image: rabbitmq:4-management-alpine
     container_name: fieldops-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: fieldops
-      RABBITMQ_DEFAULT_PASS: fieldops_dev_password
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -53,8 +53,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: fieldops-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@fieldops.com
-      PGADMIN_DEFAULT_PASSWORD: fieldops_admin_password
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
       - "5050:80"
     volumes:
@@ -73,7 +73,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__TechniciansDatabase: Host=postgres;Port=5432;Database=fieldops_technicians;Username=fieldops;Password=fieldops_dev_password
+      ConnectionStrings__TechniciansDatabase: Host=postgres;Port=5432;Database=fieldops_technicians;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY}
     ports:
       - "5072:8080"
     depends_on:
@@ -90,7 +91,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__IdentityDatabase: Host=postgres;Port=5432;Database=fieldops_identity;Username=fieldops;Password=fieldops_dev_password
+      ConnectionStrings__IdentityDatabase: Host=postgres;Port=5432;Database=fieldops_identity;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY}
     ports:
       - "5090:8080"
     depends_on:
@@ -107,8 +109,11 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__WorkOrdersDatabase: Host=postgres;Port=5432;Database=fieldops_workorders;Username=fieldops;Password=fieldops_dev_password
+      ConnectionStrings__WorkOrdersDatabase: Host=postgres;Port=5432;Database=fieldops_workorders;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY}
       RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
       ServiceUrls__TechniciansApi: http://technicians-api:8080/
     ports:
       - "5062:8080"
@@ -131,6 +136,8 @@ services:
       DOTNET_ENVIRONMENT: Development
       ConnectionStrings__NotificationsDatabase: Data Source=/data/fieldops-notifications.db
       RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
       Smtp__Host: mailpit
     volumes:
       - fieldops-notification-data:/data

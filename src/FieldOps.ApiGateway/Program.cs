@@ -22,7 +22,22 @@ builder.Services.AddCors(options =>
 
 
 builder.Services.AddHealthChecks();
+
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Instance =context.HttpContext.Request.Path;
+
+        context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+    };
+});
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.UseStatusCodePages();
 
 app.UseCors("ReactClient");
 
