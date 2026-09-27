@@ -199,6 +199,75 @@ public sealed class WorkOrdersWorkflowTests : IClassFixture<WorkOrdersApiFactory
             response.Items[0].Title);
     }
 
+    [Fact]
+    public async Task UpdateDetails_ActiveWorkOrder_UpdatesAndCreatesAuditEntry()
+    {
+        var workOrder = CreateWorkOrder(WorkOrderStatus.Submitted, WorkOrderPriority.Low, "Orginal title", "Orginal location");
+        await SeedAsync(workOrder);
+        var updateResponse = await _client.PutAsJsonAsync($"/api/workorders/{workOrder.Id}/details",
+            new
+            {
+                title = "Updated title",
+                description = "Updated description",
+                location = "Updated location",
+                priority = "Emergency"
+            });
+
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        await using(var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<WorkOrdersDbContext>();
+
+            var savedWorkOrder = await dbContext.WorkOrders.SingleAsync(x => x.Id == workOrder.Id);
+            
+            Assert.Equal("Updated title", savedWorkOrder.Title);
+
+            Assert.Equal("Updated location", savedWorkOrder.Location);
+
+            Assert.Equal(WorkOrderPriority.Emergency, savedWorkOrder.Priority);
+
+            var history = await _client.GetFromJsonAsync<List<WorkOrderAuditResponse>>($"/api/workorders/{workOrder.Id}/history", JsonOptions);
+
+            Assert.NotNull(history);
+
+            var auditEntry = Assert.Single(history);
+
+            Assert.Equal(WorkOrderAuditAction.DetailsUpdated, auditEntry.Action);
+
+            Assert.Equal(WorkOrderStatus.Submitted, auditEntry.PreviousStatus);
+
+            Assert.Equal(WorkOrderStatus.Submitted, auditEntry.NewStatus);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateDetails_CompletedWorkOrder_ReturnsConflict()
+    {
+        var workOrder = CreateWorkOrder(WorkOrderStatus.Completed);
+
+        await SeedAsync(workOrder);
+
+        var response = await _client.PutAsJsonAsync($"/api/workorders/{workOrder.Id}/details", new {
+            title = "Attempted update",
+            description = "Should not be saved",
+            location = "New location",
+            priority = "Emergency"
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        await using var scope = _factory.Services.CreateAsyncScope();
+
+        var dbContext = scope.ServiceProvider.GetRequiredService<WorkOrdersDbContext>();
+
+        var saveWorkOrder = await dbContext.WorkOrders.SingleAsync(x => x.Id == workOrder.Id);
+
+        Assert.Equal("Test work order", saveWorkOrder.Title);
+
+        Assert.False(await dbContext.WorkOrderAuditEntries.AnyAsync(x => x.WorkOrderId == workOrder.Id));
+    }
+
+
     private void ResetDatabase()
     {
         using var scope =
